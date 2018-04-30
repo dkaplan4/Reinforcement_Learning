@@ -11,6 +11,7 @@ class game2048(object):
     Class to implement the game 2048
     Default size is a 4x4 grid, but you can change the size with the parameter `size`
     THE VALUES AT THE BOXES ARE __THE__ POWER OF 2, not 2^the_power
+        * 0 refers to there not being any tile at that location, not a value of 1
     In the first iteration, render is a print function, not an actual picture window
 
     Iteration 1: April 27, 2018
@@ -19,6 +20,7 @@ class game2048(object):
     def __init__(self,
                  size=4,
                  dodebug=False,
+                 penalize_wrong_moves=False, #returns a negative reward if a move does not change the board
                  P_1_new_tile = 0.8, #probability that there is 1 new tile generated
                  P_val_2_generated = 0.9): #probability the new value of the tile is 2
         '''
@@ -41,6 +43,10 @@ class game2048(object):
 
         self.__score = 0
 
+        self.__total_moves = 0
+
+        self.__penalize_wrong_moves = penalize_wrong_moves
+
         #Probability of 1 tile generated = P_1_new_tile
         #Probability of 2 tiles generated = 1 - P_1_new_tile
         self.__P_1_new_tile = P_1_new_tile
@@ -53,6 +59,7 @@ class game2048(object):
         self.__add_random_tiles()
         self.__did_reset = True
         self.__score = 0
+        self.__total_moves = 0
 
     def step(self,action):
         '''
@@ -65,8 +72,18 @@ class game2048(object):
         if not self.__did_reset:
             print('Did not reset before taking a step')
             sys.exit()
-        reward = self.__move(action)
-        self.__score += reward
+        #save the previous state
+        _state = self.__state.copy()
+        reward,score = self.__move(action)
+        #if the state did not change, that means nothing happened and we do not add new tiles
+        if not np.array_equal(_state,self.__state):
+            self.__add_random_tiles()
+
+        elif self.__penalize_wrong_moves:
+                reward = -1
+
+        self.__score += score
+        self.__total_moves += 1
         done = self.__is_game_over()
         return self.__state,reward,done,0
 
@@ -83,6 +100,9 @@ class game2048(object):
     def get_state(self):
         return self.__state
 
+    def get_total_steps(self):
+        return self.__total_moves
+
     def _set_state(self,arr):
         '''
         For Debugging only
@@ -95,31 +115,36 @@ class game2048(object):
         Uses the function `__condense` to condense each row or column
         '''
         cumm_reward = 0
+        cumm_score = 0
         #up
         if action == 1:
             for i in range(self.__size):
-                self.__state[:,i],r = self.__condense(self.__state[:,i])
+                self.__state[:,i],r,s = self.__condense(self.__state[:,i])
                 cumm_reward += r
+                cumm_score += s
         #down
         if action == 2:
             for i in range(self.__size):
-                a,r = self.__condense(np.fliplr([self.__state[:,i]])[0])
+                a,r,s = self.__condense(np.fliplr([self.__state[:,i]])[0])
                 self.__state[:,i] = np.fliplr([a])[0]
                 cumm_reward += r
+                cumm_score += s
 
         #left
         if action == 3:
             for i in range(self.__size):
-                self.__state[i,:],r = self.__condense(self.__state[i,:])
+                self.__state[i,:],r,s = self.__condense(self.__state[i,:])
                 cumm_reward += r
+                cumm_score += s
 
         #right
         if action == 4:
             for i in range(self.__size):
-                a,r = self.__condense(np.fliplr([self.__state[i,:]])[0])
+                a,r,s = self.__condense(np.fliplr([self.__state[i,:]])[0])
                 self.__state[i,:] = np.fliplr([a])[0]
                 cumm_reward += r
-        return cumm_reward
+                cumm_score += s
+        return cumm_reward,cumm_score
 
     def __condense(self,arr):
         '''
@@ -130,6 +155,7 @@ class game2048(object):
         #return array
         ret = np.array([])
         reward = 0
+        score = 0
         #First, get rid of all zeros in arr
         _arr=np.array([])
         for a in arr:
@@ -142,7 +168,8 @@ class game2048(object):
                 if _arr[i] == _arr[i+1]:
                     ret = np.append(ret,_arr[i]+1)
                     #only add reward if tiles combine
-                    reward += 2**(ret[-1])
+                    score += 2**(ret[-1])
+                    reward += ret[-1]
                     i += 1
                 else:
                     ret = np.append(ret,_arr[i])
@@ -152,7 +179,7 @@ class game2048(object):
         # make ret the right length by zero padding
         if len(ret) < self.__size:
             ret = np.append(ret,np.zeros(self.__size-len(ret)))
-        return ret,reward
+        return ret,reward,score
 
     def __add_random_tiles(self):
         '''
@@ -167,7 +194,7 @@ class game2048(object):
 
         # generate the number of tiles to do
         # check if there are enough spaces
-        num_tiles = 1 if random.random() < self.__P_1_new_tile and len(indecies) == 1 else 2
+        num_tiles = 1 if random.random() < self.__P_1_new_tile or len(indecies) == 1 else 2
 
         prev_index = -1
         for i in range(num_tiles):
