@@ -1,25 +1,40 @@
-'''
-Implementing q-learning for 2048
-'''
 import numpy as np
-import collections
-import math
-from game2048 import Game2048 as G2048
 import tensorflow as tf
+from game2048 import Game2048
+import os
+from Estimator import Estimator,deep_q_learning
 
-env = G2048()
+env = Game2048()
 
-# Maximum value for this implementation = 2^15 = 32,768
+tf.reset_default_graph()
+
+# Where we save our checkpoints and graphs
+experiment_dir = os.path.abspath("./experiments/")
+
+# Create a glboal step variable
+global_step = tf.Variable(0, name='global_step', trainable=False)
+
+# Create estimators
+q_estimator = Estimator(scope="q_estimator", summaries_dir=experiment_dir)
+target_estimator = Estimator(scope="target_q")
 
 
-# Hyperparameters
-buckets = 0
-n_episodes=5000
-min_alpha=0.1  # learning rate
-min_epsilon=0.1  # exploration rate
-gamma=0.8  # discount factor
-ada_divisor=25 #scalar we are multiplying the alpha curves
+# Run the experiment
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    for t, stats in deep_q_learning(sess,
+                                    env,
+                                    q_estimator=q_estimator,
+                                    target_estimator=target_estimator,
+                                    experiment_dir=experiment_dir,
+                                    num_episodes=20,
+                                    replay_memory_size=500000,
+                                    replay_memory_init_size=50000,
+                                    update_target_estimator_every=10000,
+                                    epsilon_start=1.0,
+                                    epsilon_end=0.01,
+                                    epsilon_decay_steps=500000,
+                                    discount_factor=0.99,
+                                    batch_size=32):
 
-
-def run_episode:
-    return 0
+        print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))
