@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from game2048 import Game2048
 import os
+from plotting import plot_episode_stats
 from Estimator import Estimator,deep_q_learning
 
 env = Game2048()
@@ -27,14 +28,24 @@ with tf.Session() as sess:
                                     q_estimator=q_estimator,
                                     target_estimator=target_estimator,
                                     experiment_dir=experiment_dir,
-                                    num_episodes=20,
-                                    replay_memory_size=500000,
+                                    num_episodes=100000,
+                                    replay_memory_size=50000,
                                     replay_memory_init_size=50000,
                                     update_target_estimator_every=10000,
                                     epsilon_start=1.0,
                                     epsilon_end=0.01,
-                                    epsilon_decay_steps=500000,
+                                    epsilon_decay_steps=100000,
                                     discount_factor=0.99,
-                                    batch_size=32):
+                                    batch_size=32,
+                                    force_legal_move=True):
 
         print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))
+    plot_episode_stats(stats)
+
+#print greedy run
+ACTION_NAMES = ['up','down','left','right']
+data = np.genfromtxt("greedy_run.csv",delimiter=",")
+for i in range(len(data[:,0])):
+    state = np.reshape(data[i,0:16],[4,4])
+    action = data[i,-1]
+    print('state:\n{}\naction taken: {}'.format(state,ACTION_NAMES[action]))

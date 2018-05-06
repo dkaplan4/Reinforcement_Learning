@@ -5,6 +5,7 @@ import sys
 np.set_printoptions(suppress=True)
 
 
+
 class Game2048(object):
     '''
     Author: David Kaplan
@@ -21,19 +22,21 @@ class Game2048(object):
     def __init__(self,
                  size=4,
                  dodebug=False,
-                 penalize_wrong_moves=False,  # returns a negative reward if a move does not change the board
+                 penalize_wrong_moves=True,  # ends the game if 100 wrong moves are done
                  p_1_new_tile=0.8,  # probability that there is 1 new tile generated
                  p_val_2_generated=0.9):  # probability the new value of the tile is 2
         self.__state = np.zeros(shape=(size, size))
         self.__size = size
-        # 1: up, 2: down, 3: left, 4: right
-        self.action_space = np.array([1, 2, 3, 4])
+        # 0: up, 1: down, 2: left, 3: right
+        self.action_space = np.array([0, 1, 2, 3])
 
         self.__dodebug = dodebug
 
         self.__did_reset = False
 
         self.__score = 0
+
+        self.__num_illegal_moves = 0
 
         self.__total_moves = 0
 
@@ -50,8 +53,10 @@ class Game2048(object):
         self.__state = np.zeros(shape=(self.__size, self.__size))
         self.__add_random_tiles()
         self.__did_reset = True
+        self.__num_illegal_moves = 0
         self.__score = 0
         self.__total_moves = 0
+        return self.__state
 
     def step(self, action):
         '''
@@ -72,11 +77,13 @@ class Game2048(object):
             self.__add_random_tiles()
 
         elif self.__penalize_wrong_moves:
-            reward = -1
+            self.__num_illegal_moves += 1
 
         self.__score += score
         self.__total_moves += 1
         done = self.__is_game_over()
+        if self.__num_illegal_moves == 100:
+            done = True
         return self.__state, reward, done, 0
 
     def render(self):
@@ -95,6 +102,19 @@ class Game2048(object):
     def get_total_steps(self):
         return self.__total_moves
 
+    def get_best_valid_move(self,prob_actions):
+        # record base state
+        action_order = np.argsort(prob_actions)
+        ret = []
+        _state = self.__state.copy()
+        for action in action_order:
+            self.__move(action)
+            if not np.array_equal(_state, self.__state):
+                return action
+
+        print('should not go here')
+        sys.exit('get_best_valid_moves -- could not find a move? something is wrong.')
+
     def _set_state(self, arr):
         '''
         For Debugging only
@@ -109,13 +129,13 @@ class Game2048(object):
         cumm_reward = 0
         cumm_score = 0
         # up
-        if action == 1:
+        if action == 0:
             for i in range(self.__size):
                 self.__state[:, i], r, s = self.__condense(self.__state[:, i])
                 cumm_reward += r
                 cumm_score += s
         # down
-        if action == 2:
+        if action == 1:
             for i in range(self.__size):
                 a, r, s = self.__condense(np.fliplr([self.__state[:, i]])[0])
                 self.__state[:, i] = np.fliplr([a])[0]
@@ -123,19 +143,20 @@ class Game2048(object):
                 cumm_score += s
 
         # left
-        if action == 3:
+        if action == 2:
             for i in range(self.__size):
                 self.__state[i, :], r, s = self.__condense(self.__state[i, :])
                 cumm_reward += r
                 cumm_score += s
 
         # right
-        if action == 4:
+        if action == 3:
             for i in range(self.__size):
                 a, r, s = self.__condense(np.fliplr([self.__state[i, :]])[0])
                 self.__state[i, :] = np.fliplr([a])[0]
                 cumm_reward += r
                 cumm_score += s
+
         return cumm_reward, cumm_score
 
     def __condense(self, arr):
@@ -213,9 +234,17 @@ class Game2048(object):
             # record base state
             _state = self.__state
             for action in self.action_space:
-                if self.__move(action) > 0:
+                if self.__move(action)[0] > 0:
                     return False
                 self.__state = _state
             return True
         else:
             return False
+
+def get_best_valid_move(state,prob_actions):
+    '''
+    Returns the indexes of the moves that are possible
+    '''
+    env = Game2048()
+    env._set_state(state)
+    return env.get_best_valid_move(prob_actions)
