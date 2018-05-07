@@ -6,6 +6,9 @@
  - Uses Python 3
  - Matplotlib
  - Numpy
+ - Tensorflow 1.8
+ - Pandas
+ - psutil
 
 ## Module Information
  - Gym environment: We created our own. The source code can be found in `game2048.py`. The `render()` function is just a print statement for now.
@@ -14,4 +17,3 @@
 ## Learning algorithms
  - Random Policy: `random_policy.py`
  - Q-Learning: `q2048.py`
-

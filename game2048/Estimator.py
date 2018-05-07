@@ -304,16 +304,11 @@ def deep_q_learning(sess,
             # Take a step
             action_probs = policy(sess, state, epsilon)
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
-            
-            if i_episode % 100 == 0:
-                print("")
-                sys.stdout.flush()
-                env.render()
-                sys.stdout.flush()
-                print('next action:',action)
-                sys.stdout.flush()
+            next_state, reward, done, _ = env.step(VALID_ACTIONS[action],force_legal_move)
 
-            next_state, reward, done, _ = env.step(VALID_ACTIONS[action])
+            if done == True:
+                print('\nscore:',env.score())
+                sys.stdout.flush()
 
             # If our replay memory is full, pop the first element
             if len(replay_memory) == replay_memory_size:

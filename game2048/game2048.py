@@ -4,8 +4,6 @@ import sys
 
 np.set_printoptions(suppress=True)
 
-
-
 class Game2048(object):
     '''
     Author: David Kaplan
@@ -58,7 +56,7 @@ class Game2048(object):
         self.__total_moves = 0
         return self.__state
 
-    def step(self, action):
+    def step(self, action,force_legal_move=False):
         '''
         Returns 4 variables:
          - observations (2-dim array): we just return the 2048 grid
@@ -69,21 +67,26 @@ class Game2048(object):
         if not self.__did_reset:
             print('Did not reset before taking a step')
             sys.exit()
-        # save the previous state
-        _state = self.__state.copy()
-        reward, score = self.__move(action)
-        # if the state did not change, that means nothing happened and we do not add new tiles
-        if not np.array_equal(_state, self.__state):
-            self.__add_random_tiles()
 
-        elif self.__penalize_wrong_moves:
-            self.__num_illegal_moves += 1
+        if force_legal_move:
+            #if force legal move is true, then we know that the next state will move and
+            #we do not have to check
+            reward, score = self.__move(action)
+            self.__add_random_tiles()
+        else:
+            # save the previous state
+            _state = self.__state.copy()
+            reward, score = self.__move(action)
+            # if the state did not change, that means nothing happened and we do not add new tiles
+            if not np.array_equal(_state, self.__state):
+                self.__add_random_tiles()
+
+        # elif self.__penalize_wrong_moves:
+        #     self.__num_illegal_moves += 1
 
         self.__score += score
         self.__total_moves += 1
         done = self.__is_game_over()
-        if self.__num_illegal_moves == 100:
-            done = True
         return self.__state, reward, done, 0
 
     def render(self):
@@ -95,6 +98,9 @@ class Game2048(object):
                 else:
                     temp[row, col] = 2 ** self.__state[row, col]
         print(np.matrix(temp))
+
+    def score(self):
+        return self.__score
 
     def get_state(self):
         return self.__state

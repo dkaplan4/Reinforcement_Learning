@@ -8,17 +8,19 @@ env = G2048()
 env.reset()
 
 
-moves = [1, 2, 3, 4]
+moves = [0,1,2,3]
 history = np.array([])
 start = time.time()
 # Random Policy
 for i in range(500):
+    print(i)
     env.reset()
     cumm_reward = 0
     done = False
 
     while not done:
-        obs,reward,done,_ = env.step(random.choice(moves))
+        action = random.choice(moves)
+        obs,reward,done,_ = env.step(action)
         cumm_reward += reward
     history = np.append(history,cumm_reward)
 
