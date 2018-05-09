@@ -23,3 +23,6 @@
 For a random policy, use `python random_policy.py`.
 
 For DQN, use `python q2048.py`.
+
+To see print recordings by the best performances by both DQN and random, look at
+`best_run_random.txt` and `best_run_DQN.txt`.
