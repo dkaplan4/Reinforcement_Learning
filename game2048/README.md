@@ -17,3 +17,9 @@
 ## Learning algorithms
  - Random Policy: `random_policy.py`
  - Q-Learning: `q2048.py`
+
+## Running the algorithms
+
+For a random policy, use `python random_policy.py`.
+
+For DQN, use `python q2048.py`.
